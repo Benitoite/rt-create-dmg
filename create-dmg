@@ -65,15 +65,14 @@ function usage() {
 	exit 0
 }
 
-WINX=10
-WINY=60
-WINW=500
-WINH=350
-ICON_SIZE=128
+WINX=72
+WINY=72
+WINW=1000
+WINH=689
+ICON_SIZE=80
 TEXT_SIZE=16
 FORMAT="UDZO"
-ADD_FILE_SOURCES=()
-ADD_FILE_TARGETS=()
+
 IMAGEKEY=""
 HDIUTIL_VERBOSITY=""
 SANDBOX_SAFE=0
@@ -90,7 +89,7 @@ while test "${1:0:1}" = "-"; do
 	--background)
 		BACKGROUND_FILE="$2"
 		BACKGROUND_FILE_NAME="$(basename $BACKGROUND_FILE)"
-		BACKGROUND_CLAUSE="set background picture of opts to file \".background:$BACKGROUND_FILE_NAME\""
+		BACKGROUND_CLAUSE="set background picture of opts to file '\"'.background:$BACKGROUND_FILE_NAME'\"'"
 		REPOSITION_HIDDEN_FILES_CLAUSE="set position of every item to {theBottomRightX + 100, 100}"
 		shift; shift;;
 	--icon-size)
@@ -143,8 +142,7 @@ while test "${1:0:1}" = "-"; do
 	--add-file | --add-folder)
 		ADD_FILE_TARGETS+=("$2")
 		ADD_FILE_SOURCES+=("$3")
-		POSITION_CLAUSE="${POSITION_CLAUSE}
-		set position of item \"$2\" to {$4, $5}
+		POSITION_CLAUSE="${POSITION_CLAUSE}set position of item \"$2\" to {$4, $5}
 		"
 		shift; shift; shift; shift; shift;;
 	--disk-image-size)
@@ -189,8 +187,10 @@ DMG_DIR="$(cd "$DMG_DIRNAME" > /dev/null; pwd)"
 DMG_NAME="$(basename "$DMG_PATH")"
 DMG_TEMP_NAME="$DMG_DIR/rw.${DMG_NAME}"
 SRC_FOLDER="$(cd "$2" > /dev/null; pwd)"
-
+srcDir=$SRC_FOLDER
 test -z "$VOLUME_NAME" && VOLUME_NAME="$(basename "$DMG_PATH" .dmg)"
+ADD_FILE_SOURCES=(${srcDir}/Website.webloc ${srcDir}/Documentation.webloc ${srcDir}/Forum.webloc "${srcDir}/Report Bug.webloc" "${srcDir}/.background" "${srcDir}/.background/background.png" "${srcDir}/.VolumeIcon.icns")
+ADD_FILE_TARGETS=(Website.webloc Documentation.webloc Forum.webloc "Report Bug.webloc" ".background" ".background/background.png" ".VolumeIcon.icns")
 
 # brew formula will set this as 1 and embed the support scripts
 BREW_INSTALL=0
@@ -235,7 +235,7 @@ fi
 if [ $SANDBOX_SAFE -eq 0 ]; then
 	hdiutil create ${HDIUTIL_VERBOSITY} -srcfolder "$SRC_FOLDER" -volname "${VOLUME_NAME}" -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW ${CUSTOM_SIZE} "${DMG_TEMP_NAME}"
 else	
-	hdiutil makehybrid ${HDIUTIL_VERBOSITY} -default-volume-name "${VOLUME_NAME}" -hfs -o "${DMG_TEMP_NAME}" "$SRC_FOLDER"
+	hdiutil makehybrid -default-volume-name "${VOLUME_NAME}" -hfs -o "${DMG_TEMP_NAME}" "$SRC_FOLDER"
 	hdiutil convert -format UDRW -ov -o "${DMG_TEMP_NAME}" "${DMG_TEMP_NAME}"
 	DISK_IMAGE_SIZE_CUSTOM=$DISK_IMAGE_SIZE
 fi
@@ -346,10 +346,8 @@ else
 	echo "Skipping blessing on sandbox"
 fi
 
-if ! test -z "$VOLUME_ICON_FILE"; then
-	# tell the volume that it has a special file attribute
 	SetFile -a C "$MOUNT_DIR"
-fi
+
 
 # unmount
 echo "Unmounting disk image..."
